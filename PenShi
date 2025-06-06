@@ -1,2 +1,45 @@
-#!/usr/bin/bash
-echo "hello"
+#!/bin/bash
+
+usage() {
+    echo "Usage: $0 [start|stop|status|flush]"
+    exit 1
+}
+
+start_firewall() {
+    echo "Starting firewall..."
+}
+stop_firewall() {
+    echo "Stopping firewall..."
+}
+status_firewall() {
+    echo "Current iptables rules:"
+    sudo iptables -L -n -v
+}
+
+flush_firewall() {
+    echo "Flushing all iptables rules..."
+}
+
+
+if [ $# -ne 1 ]; then
+    usage
+fi
+
+case $1 in
+    start)
+        start_firewall
+        ;;
+    stop)
+        stop_firewall
+        ;;
+    status)
+        status_firewall
+        ;;
+    flush)
+        flush_firewall
+        ;;
+    *)
+        usage
+        ;;
+esac
+
