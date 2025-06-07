@@ -1,13 +1,146 @@
 #!/bin/bash
-
+commands="commands.txt"
+iptables_rules_backup_dir="backup" 
+#Functions 
 iptablesWithSudo(){
     sudo iptables "$@"
 }
 usage() {
-    echo "Usage: $0 [start|reset|status|flush]"
+    echo "Usage: $0 [Commands] <Options> "
+    #"[start|reset|status|flush]"
+    echo "Commands :
+    -rules		rules managent
+    "
+    echo "Options :
+    --l		list all rules
+    --f		delete all rules 
+    --d 	delete one rule by chain (FORWARD , INPUT ,OUTPUT) and id (get it from $0  -rules --l)
+    exemple :
+    $0 -rules --d FORWARD 1 
+    "
     exit 1
 }
-commands="commands"
+# Rules 
+
+check_iptables_rules() {
+
+    if [ "$( sudo iptables-save | grep '^\-' | wc -l )" -eq 0 ]; then
+        echo "No iptables rules found. Stopping execution."
+        exit 1
+    fi
+
+}
+
+backup_iptables_rules() {
+    local backup_dir="$1"
+    
+    if [[ ! -d "$backup_dir" ]]; then
+        mkdir -p "$backup_dir"
+        if [[ $? -ne 0 ]]; then
+            exit 1
+        fi
+    fi
+
+    local backup_file="$backup_dir/iptables_rules_backup_$(date +%Y-%m-%d_%H:%M:%S).txt"
+    sudo iptables-save > "$backup_file"
+
+    if [[ $? -eq 0 ]]; then
+        echo "Iptables rules backed up to $backup_file"
+    else
+        exit 1
+    fi
+}
+
+restore_iptables_rules() {
+    local backup_dir="$1"
+
+    if [[ ! -d "$backup_dir" ]]; then
+        echo "Directory $backup_dir does not exist. Exiting."
+        exit 1
+    fi
+
+    echo "Available backup files in $backup_dir:"
+    select backup_file in "$backup_dir"/*; do
+        if [[ -f "$backup_file" ]]; then
+            echo "You have selected: $backup_file"
+            sudo iptables-restore < "$backup_file"
+            if [[ $? -eq 0 ]]; then
+                echo "Iptables rules restored from $backup_file"
+            else
+                echo "Failed to restore iptables rules."
+            fi
+            break
+        else
+            echo "Invalid selection. Please choose a valid file."
+        fi
+    done
+}
+
+rules() {
+  
+    if [[ "$1" == "--l" ]]; then
+        echo "Listing rules"
+        sleep 2
+        iptablesWithSudo -L --line-numbers
+
+    elif [[ "$1" == "--f" ]]; then
+        check_iptables_rules 
+        backup_iptables_rules "$iptables_rules_backup_dir" #backup rules in case of error by user
+        iptablesWithSudo --flush
+        echo "All iptables rules flushed"
+
+
+    elif [[ "$1" == "--d" ]]; then
+         # Check if the rule ID is a valid number
+        if ! [[ "$3" =~ ^[0-9]+$ ]]; then
+            echo "Invalid rule ID: $3 . It must be a number."
+            exit 1
+        fi
+
+        # Check correct chain , chose INPUT , FORWARD or OUTPUT
+        if [[ "$2" == "OUTPUT" || "$2" == "FORWARD"|| "$2" == "INPUT"  ]]; then
+       
+        #execute
+        iptablesWithSudo -D $2 $3
+
+        else
+            echo "$2 is incorrect chain , chose INPUT , FORWARD or OUTPUT ."
+        fi
+
+
+    elif [[ "$1" == "--r" ]]; then
+        restore_iptables_rules "$iptables_rules_backup_dir"
+
+    elif [[ "$1" == "--b" ]]; then
+        backup_iptables_rules "$iptables_rules_backup_dir"
+
+    else
+        echo "the '-rules' has no option like : $1 "
+    fi
+}
+
+
+# End Rules 
+
+if [ $# -lt 2 ]; then
+    usage
+fi
+
+
+# Parse commands
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -rules ) #-c | --count )
+            rules $2 $3 $4
+            exit 0
+            ;;
+        * )
+            usage
+            ;;
+    esac
+    shift
+done
+
 
 start_firewall() {
     echo "Starting firewall..."
@@ -17,10 +150,9 @@ start_firewall() {
         echo "If you have no commands , feal free to explore the pre made profiles  in profiles ."
         echo "Copy any profile contents and past it in  '$commands' the re run the script."
     fi
-
-
     
 }
+
 reset_firewall() {
     echo "Stopping firewall..."
     $iptablesWithSudo -F
@@ -40,10 +172,9 @@ flush_firewall() {
     echo "All rules flushed."
 }
 
-if [ $# -ne 1 ]; then
-    usage
-fi
 
+
+:<< 'END_COMMENT'
 case $1 in
     start)
         start_firewall
@@ -61,4 +192,4 @@ case $1 in
         usage
         ;;
 esac
-
+END_COMMENT
