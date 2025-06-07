@@ -4,36 +4,24 @@ iptablesWithSudo(){
     sudo iptables "$@"
 }
 usage() {
-    echo "Usage: $0 [start|stop|status|flush]"
+    echo "Usage: $0 [start|reset|status|flush]"
     exit 1
 }
+commands="commands"
 
 start_firewall() {
     echo "Starting firewall..."
+    #Chck if commands empty
+    if [ ! -s "$commands" ]; then
+        echo "The file '$commands' is empty. Please Fill it with commands."
+        echo "If you have no commands , feal free to explore the pre made profiles  in profiles ."
+        echo "Copy any profile contents and past it in  '$commands' the re run the script."
+    fi
 
-    # Flush existing rules
-    $iptablesWithSudo -F
 
-    # Set default policies
-    $iptablesWithSudo -P INPUT DROP
-    $iptablesWithSudo -P FORWARD DROP
-    $iptablesWithSudo -P OUTPUT ACCEPT
-
-    # Allow established connections
-    $iptablesWithSudo -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-
-    # Allow SSH (port 22)
-    $iptablesWithSudo -A INPUT -p tcp --dport 22 -j ACCEPT
-
-    # Allow HTTP (port 80)
-    $iptablesWithSudo -A INPUT -p tcp --dport 80 -j ACCEPT
-
-    # Allow HTTPS (port 443)
-    $iptablesWithSudo -A INPUT -p tcp --dport 443 -j ACCEPT
-
-    echo "Firewall started with default rules."
+    
 }
-stop_firewall() {
+reset_firewall() {
     echo "Stopping firewall..."
     $iptablesWithSudo -F
     $iptablesWithSudo -P INPUT ACCEPT
@@ -60,8 +48,8 @@ case $1 in
     start)
         start_firewall
         ;;
-    stop)
-        stop_firewall
+    reset)
+        reset_firewall
         ;;
     status)
         status_firewall
