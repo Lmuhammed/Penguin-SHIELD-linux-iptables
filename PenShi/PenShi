@@ -1,10 +1,15 @@
 #!/bin/bash
 
+#================== Vars =================>
+
 filename="commands"
 iptables_rules_backup_dir="backup" 
 conf_file=".env"
 
-#Functions 
+#================== End Vars =============>
+
+#================== Functions ============>
+
 iptablesWithSudo(){
     sudo iptables "$@"
 }
@@ -44,7 +49,8 @@ usage() {
     "
     exit 1
 }
-# Rules 
+
+# Rules Functions
 
 check_iptables_rules() {
 
@@ -155,79 +161,19 @@ rules() {
     fi
 }
 
+# End Rules Functions
 
-# End Rules 
+#================== End Functions =================>
 
 if [ $# -lt 2 ]; then
     usage
 fi
 
-
-
-
-# Parse commands
-while [[ "$1" != "" ]]; do
-    case $1 in
-        -rules ) #-c | --count )
-            rules $2 $3 $4
-            exit 0
-            ;;
-        * )
-            usage
-            ;;
-    esac
-    shift
-done
-
-
-start_firewall() {
-    echo "Starting firewall..."
-    #Chck if commands empty
-    if [ ! -s "$commands" ]; then
-        echo "The file '$commands' is empty. Please Fill it with commands."
-        echo "If you have no commands , feal free to explore the pre made profiles  in profiles ."
-        echo "Copy any profile contents and past it in  '$commands' the re run the script."
-    fi
-    
-}
-
-reset_firewall() {
-    echo "Stopping firewall..."
-    $iptablesWithSudo -F
-    $iptablesWithSudo -P INPUT ACCEPT
-    $iptablesWithSudo -P FORWARD ACCEPT
-    $iptablesWithSudo -P OUTPUT ACCEPT
-    echo "Firewall stopped. All traffic is allowed."
-}
-status_firewall() {
-    echo "Current $iptablesWithSudo rules:"
-    iptablesWithSudo -L -n -v
-}
-
-flush_firewall() {
-    echo "Flushing all $iptablesWithSudo rules..."
-    sudo $iptablesWithSudo -F
-    echo "All rules flushed."
-}
-
-
-
-:<< 'END_COMMENT'
 case $1 in
-    start)
-        start_firewall
-        ;;
-    reset)
-        reset_firewall
-        ;;
-    status)
-        status_firewall
-        ;;
-    flush)
-        flush_firewall
+    -rules)
+        rules $2 $3 $4
         ;;
     *)
         usage
         ;;
 esac
-END_COMMENT
