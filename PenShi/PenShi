@@ -6,9 +6,32 @@ filename="commands"
 iptables_rules_backup_dir="backup" 
 conf_file=".env"
 
+# colors
+GREEN="\e[32m"
+YELLOW="\e[33m"
+RED="\e[31m"
+RESET="\e[0m"
 #================== End Vars =============>
 
 #================== Functions ============>
+#print success messages
+
+print_s() {
+    echo -e "${GREEN}$1${RESET}"
+    return 0
+}
+
+#print warning messages
+print_w() {
+    echo -e "${YELLOW}$1${RESET}"
+    return 1
+}
+
+#print error messages 
+print_e() {
+    echo -e "${RED}$1${RESET}"
+    exit 2
+}
 
 iptablesWithSudo(){
     sudo iptables "$@"
@@ -20,24 +43,21 @@ env() { #usage env "das"
     local file=".env"
 
     if [[ ! -f "$file" ]]; then
-        echo "Configuration file not found!"
-        return 1
+        print_e "Configuration file not found!"
     fi
     local value=$(grep -E "^$key=" "$file" | cut -d'=' -f2-)
 
     if [[ -n "$value" ]]; then
         echo "$value"
     else
-        echo "Key '$key' not found in the configuration file."
-        exit 1
+        print_e "Key '$key' not found in the configuration file."
     fi
 }
 
 usage() {
     echo "Usage: $0 [Commands] <Options> "
-    #"[start|reset|status|flush]"
     echo "Commands :
-    -rules		rules managent
+    -R -rules		rules managent
     "
     echo "Options :
     --a     add rules (all rules must be in commands file)
@@ -55,7 +75,7 @@ usage() {
 check_iptables_rules() {
 
     if [ "$( sudo iptables-save | grep '^\-' | wc -l )" -eq 0 ]; then
-        echo "No iptables rules found. Stopping execution."
+        print_w ""No iptables rules found. Stopping execution.""
         exit 1
     fi
 
@@ -75,9 +95,9 @@ backup_iptables_rules() {
     sudo iptables-save > "$backup_file"
 
     if [[ $? -eq 0 ]]; then
-        echo "Iptables rules backed up to $backup_file"
+        print_s "Iptables rules backed up to $backup_file"
     else
-        exit 1
+        print_e "Something went wrong when trying to backup rules"
     fi
 }
 
@@ -85,23 +105,23 @@ restore_iptables_rules() {
     local backup_dir="$1"
 
     if [[ ! -d "$backup_dir" ]]; then
-        echo "Directory $backup_dir does not exist. Exiting."
-        exit 1
+        print_e "Directory $backup_dir does not exist. Exiting."
+
     fi
 
-    echo "Available backup files in $backup_dir:"
+    echo "Available backup files in $backup_dir : "
     select backup_file in "$backup_dir"/*; do
         if [[ -f "$backup_file" ]]; then
-            echo "You have selected: $backup_file"
+            print_s  "You have selected: $backup_file"
             sudo iptables-restore < "$backup_file"
             if [[ $? -eq 0 ]]; then
-                echo "Iptables rules restored from $backup_file"
+                print_s "Iptables rules restored from $backup_file"
             else
-                echo "Failed to restore iptables rules."
+                print_e "Failed to restore iptables rules."
             fi
             break
         else
-            echo "Invalid selection. Please choose a valid file."
+            print_e "Invalid selection. Please choose a valid file."
         fi
     done
 }
@@ -111,17 +131,16 @@ rules() {
     if [[ "$1" == "--a" ]]; then
 
     if [[ ! -f $filename ]]; then
-        echo "File not found!"
-        exit 1
+        print_e "File not found!"
     fi
 
     while IFS= read -r line; do
-        echo "Executing: $line"
+        print_s "Executing: $line"
         sudo $line
     done < "$filename"
 
     elif [[ "$1" == "--l" ]]; then
-        echo "Listing rules"
+        print_s "Listing rules ... "
         sleep 2
         iptablesWithSudo -L --line-numbers
 
@@ -129,24 +148,22 @@ rules() {
         check_iptables_rules 
         backup_iptables_rules "$iptables_rules_backup_dir" #backup rules in case of error by user
         iptablesWithSudo --flush
-        echo "All iptables rules flushed"
+        print_s "All iptables rules flushed"
 
 
     elif [[ "$1" == "--d" ]]; then
          # Check if the rule ID is a valid number
         if ! [[ "$3" =~ ^[0-9]+$ ]]; then
-            echo "Invalid rule ID: $3 . It must be a number."
-            exit 1
+            print_e "Invalid rule ID: $3 . It must be a number ."
         fi
 
         # Check correct chain , chose INPUT , FORWARD or OUTPUT
         if [[ "$2" == "OUTPUT" || "$2" == "FORWARD"|| "$2" == "INPUT"  ]]; then
        
-        #execute
         iptablesWithSudo -D $2 $3
 
         else
-            echo "$2 is incorrect chain , chose INPUT , FORWARD or OUTPUT ."
+            print_w "$2 is incorrect chain , chose INPUT , FORWARD or OUTPUT ."
         fi
 
 
@@ -157,7 +174,7 @@ rules() {
         backup_iptables_rules "$iptables_rules_backup_dir"
 
     else
-        echo "the '-rules' has no option like : $1 "
+        print_w "the '-rules' has no option like : $1 "
     fi
 }
 
@@ -170,7 +187,7 @@ if [ $# -lt 2 ]; then
 fi
 
 case $1 in
-    -rules)
+    -rules | -R )
         rules $2 $3 $4
         ;;
     *)
