@@ -2,11 +2,32 @@
 
 filename="commands"
 iptables_rules_backup_dir="backup" 
+conf_file=".env"
 
 #Functions 
 iptablesWithSudo(){
     sudo iptables "$@"
 }
+
+env() { #usage env "das"
+
+    local key="$1"
+    local file=".env"
+
+    if [[ ! -f "$file" ]]; then
+        echo "Configuration file not found!"
+        return 1
+    fi
+    local value=$(grep -E "^$key=" "$file" | cut -d'=' -f2-)
+
+    if [[ -n "$value" ]]; then
+        echo "$value"
+    else
+        echo "Key '$key' not found in the configuration file."
+        exit 1
+    fi
+}
+
 usage() {
     echo "Usage: $0 [Commands] <Options> "
     #"[start|reset|status|flush]"
@@ -140,6 +161,8 @@ rules() {
 if [ $# -lt 2 ]; then
     usage
 fi
+
+
 
 
 # Parse commands
