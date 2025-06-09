@@ -14,6 +14,10 @@ RESET="\e[0m"
 #================== End Vars =============>
 
 #================== Functions ============>
+print_help (){
+echo "This Bash script simplifies the management of iptables on Linux systems by providing an easy-to-use interface for listing, creating, flushing, and deleting firewall rules. It allows users to quickly review existing rules, add new ones , and reset their firewall configuration as needed."
+
+}
 print_banner (){
 
 cat <<EOF
@@ -85,10 +89,13 @@ env() { #usage env "das"
 usage() {
     print_w "Usage: $0 [Commands] <Options> "
     echo "Commands :
+
     -R -rules		rules managent
+    -a -A		print the script description
     "
     echo "Options :
-    --a     add rules (all rules must be in commands file)
+
+    --a         add rules (all rules must be in commands file)
     --l		list all rules
     --f		delete all rules 
     --d 	delete one rule by chain (FORWARD , INPUT ,OUTPUT) and id (get it from $0  -rules --l)
@@ -189,6 +196,7 @@ rules() {
         if [[ "$2" == "OUTPUT" || "$2" == "FORWARD"|| "$2" == "INPUT"  ]]; then
        
         iptablesWithSudo -D $2 $3
+        print_s "iptables rule deleted ."
 
         else
             print_w "$2 is incorrect chain , chose INPUT , FORWARD or OUTPUT ."
@@ -212,13 +220,16 @@ rules() {
 print_banner
 check_not_debian_distribution
 
-if [ $# -lt 2 ]; then
+if [ $# -lt 1 ]; then
     usage
 fi
 
 case $1 in
     -rules | -R )
         rules $2 $3 $4
+        ;;
+    -a | -A )
+        print_help
         ;;
     *)
         usage
