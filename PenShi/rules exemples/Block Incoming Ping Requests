@@ -1,0 +1,5 @@
+iptables -A INPUT -p icmp -i [INTERFACE] -j DROP
+
+exemple :
+
+iptables -A INPUT -p icmp -i eth0 -j DROP

@@ -1,0 +1,3 @@
+exemple :
+
+iptables -A INPUT -m mac --mac-source 00:00:00:00:00:00 -j DROP

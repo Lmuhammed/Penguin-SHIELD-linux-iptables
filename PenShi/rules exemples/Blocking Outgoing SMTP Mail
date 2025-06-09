@@ -1,0 +1,4 @@
+If your server shouldn’t be sending outgoing mail, you may want to block that kind of traffic. To block outgoing SMTP mail, which uses port 25, run this command
+
+sudo iptables -A OUTPUT -p tcp --dport 25 -j REJECT
+
