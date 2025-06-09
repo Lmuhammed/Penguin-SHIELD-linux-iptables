@@ -14,6 +14,23 @@ RESET="\e[0m"
 #================== End Vars =============>
 
 #================== Functions ============>
+print_banner (){
+
+cat <<EOF
+
+###################################
+# ____              ____  _     _ #
+#|  _ \ ___ _ __   / ___|| |__ (_)#
+#| |_) / _ \ '_ \  \___ \| '_ \| |#
+#|  __/  __/ | | |  ___) | | | | |#
+#|_|   \___|_| |_| |____/|_| |_|_|#
+###################################
+EOF
+
+print_s "iptables Rules Automation Tool "
+echo ""
+}
+
 #print success messages
 
 print_s() {
@@ -37,6 +54,17 @@ iptablesWithSudo(){
     sudo iptables "$@"
 }
 
+#This iscript is tested on Debian-based distribution , if not Debian-based distribution ask the use if want to continue
+check_not_debian_distribution() {
+    if ! grep -q -E 'Debian|Ubuntu|Linux Mint|Raspbian' /etc/*release; then
+        print_w "This script has been tested on Debian-based distributions only , it seem that you are using other distro ."
+        read -p "Do you want to continue? (y/n): " choice
+        if [[ ! "$choice" == [Yy] ]]; then
+            print_e "Exiting..."
+        fi
+    fi
+}
+
 env() { #usage env "das"
 
     local key="$1"
@@ -55,7 +83,7 @@ env() { #usage env "das"
 }
 
 usage() {
-    echo "Usage: $0 [Commands] <Options> "
+    print_w "Usage: $0 [Commands] <Options> "
     echo "Commands :
     -R -rules		rules managent
     "
@@ -181,6 +209,8 @@ rules() {
 # End Rules Functions
 
 #================== End Functions =================>
+print_banner
+check_not_debian_distribution
 
 if [ $# -lt 2 ]; then
     usage
