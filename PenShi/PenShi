@@ -80,7 +80,7 @@ env() { #usage env "das"
     local value=$(grep -E "^$key=" "$file" | cut -d'=' -f2-)
 
     if [[ -n "$value" ]]; then
-        echo "$value"
+        return "$value"
     else
         print_e "Key '$key' not found in the configuration file."
     fi
@@ -181,7 +181,10 @@ rules() {
 
     elif [[ "$1" == "--f" ]]; then
         check_iptables_rules 
+        env "Rules_backup_on_deletion"
+        if [ "$?" -eq 1 ]; then #check if backup rules activated
         backup_iptables_rules "$iptables_rules_backup_dir" #backup rules in case of error by user
+        fi
         iptablesWithSudo --flush
         print_s "All iptables rules flushed"
 
