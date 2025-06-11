@@ -1,7 +1,5 @@
 #!/bin/bash
-
 #================== Vars =================>
-
 filename="commands"
 iptables_rules_backup_dir="backup" 
 conf_file=".env"
@@ -12,7 +10,6 @@ YELLOW="\e[33m"
 RED="\e[31m"
 RESET="\e[0m"
 #================== End Vars =============>
-
 #================== Functions ============>
 print_help (){
 echo "This Bash script simplifies the management of iptables on Linux systems by providing an easy-to-use interface for listing, creating, flushing, and deleting firewall rules. It allows users to quickly review existing rules, add new ones , and reset their firewall configuration as needed."
@@ -21,18 +18,16 @@ echo "This Bash script simplifies the management of iptables on Linux systems by
 print_banner (){
 
 cat <<EOF
-
 ###################################
 # ____              ____  _     _ #
 #|  _ \ ___ _ __   / ___|| |__ (_)#
 #| |_) / _ \ '_ \  \___ \| '_ \| |#
 #|  __/  __/ | | |  ___) | | | | |#
 #|_|   \___|_| |_| |____/|_| |_|_|#
+   iptables Rules Automation Tool 
 ###################################
 EOF
 
-print_s "iptables Rules Automation Tool "
-echo ""
 }
 
 #print success messages
@@ -91,7 +86,7 @@ usage() {
     echo "Commands :
 
     -R -rules		rules managent
-    -a -A		print the script description
+    -H -help		print the script description
     "
     echo "Options :
 
@@ -106,12 +101,10 @@ usage() {
 }
 
 # Rules Functions
-
 check_iptables_rules() {
 
     if [ "$( sudo iptables-save | grep '^\-' | wc -l )" -eq 0 ]; then
-        print_w ""No iptables rules found. Stopping execution.""
-        exit 1
+        print_e "No iptables rules found. Stopping execution ."
     fi
 
 }
@@ -126,7 +119,8 @@ backup_iptables_rules() {
         fi
     fi
 
-    local backup_file="$backup_dir/iptables_rules_backup_$(date +%Y-%m-%d_%H:%M:%S).txt"
+    check_iptables_rules
+    local backup_file="$backup_dir/iptables_deleted_rules_$(date +%Y-%m-%d_%H:%M:%S).txt"
     sudo iptables-save > "$backup_file"
 
     if [[ $? -eq 0 ]]; then
@@ -183,27 +177,32 @@ rules() {
         check_iptables_rules 
         env "Rules_backup_on_deletion"
         if [ "$?" -eq 1 ]; then #check if backup rules activated
-        backup_iptables_rules "$iptables_rules_backup_dir" #backup rules in case of error by user
+        backup_iptables_rules "$iptables_rules_backup_dir"
         fi
         iptablesWithSudo --flush
         print_s "All iptables rules flushed"
-
-
     elif [[ "$1" == "--d" ]]; then
          # Check if the rule ID is a valid number
         if ! [[ "$3" =~ ^[0-9]+$ ]]; then
             print_e "Invalid rule ID: $3 . It must be a number ."
         fi
-
         # Check correct chain , chose INPUT , FORWARD or OUTPUT
-        if [[ "$2" == "OUTPUT" || "$2" == "FORWARD"|| "$2" == "INPUT"  ]]; then
-       
-        iptablesWithSudo -D $2 $3
-        print_s "iptables rule deleted ."
-
+        chain=$2
+        if [ "$chain" == "o" ]; then
+            chain="OUTPUT"
+        elif [[ "$chain" == "f" ]]; then
+            chain="FORWARD"
+        elif [[ "$chain" == "i" ]]; then
+            chain="INPUT"
         else
-            print_w "$2 is incorrect chain , chose INPUT , FORWARD or OUTPUT ."
+            print_e "$chain is incorrect chain , chose i (for INPUT) , f (for FORWARD) or o (for OUTPUT) ."
         fi
+        env "Rules_backup_on_deletion"
+        if [ "$?" -eq 1 ]; then #check if backup rules activated
+        backup_iptables_rules "$iptables_rules_backup_dir"
+        fi
+        iptablesWithSudo -D $chain $3
+        print_s "iptables rule deleted ."
 
 
     elif [[ "$1" == "--r" ]]; then
@@ -231,7 +230,7 @@ case $1 in
     -rules | -R )
         rules $2 $3 $4
         ;;
-    -a | -A )
+    -help | -H )
         print_help
         ;;
     *)
